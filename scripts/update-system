@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+# Prefer an AUR helper if present, otherwise plain pacman
+if command -v paru >/dev/null 2>&1; then
+  exec paru -Syu
+elif command -v yay >/dev/null 2>&1; then
+  exec yay -Syu
+else
+  exec sudo pacman -Syu
+fi

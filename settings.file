@@ -1,0 +1,17 @@
+launcher:rofi -show drun
+wallpaper:waypaper
+terminal:ghostty
+alternate_terminal:foot
+browser:librewolf
+filemanager:nautilus
+terminal_filemanager:ghostty -e yazi
+musicplayer:elisa
+video:netflix
+streaming:youtube
+coding:emacs -c client
+samcoupe:simcoupe
+speccynext:MONO_IOMAP=all mono /mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/CSpect.exe -tv -w3 -zxnext -vsync -threaded -s28 -mmc=/mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/TBBlue.img
+gaming:steam
+graphics:gimp
+writing:libreoffice writer
+spreadsheet: libreoffice calc

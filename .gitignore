@@ -1,0 +1,8 @@
+# runtime junk
+*.log
+*.tmp
+*.swp
+*.bak
+.cache/
+cache/
+state/

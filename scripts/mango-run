@@ -1,0 +1,61 @@
+#!/bin/bash
+# ~/.config/mango/scripts/mango-run
+# Usage: mango-run <key>
+# Reads settings.file and runs the value for <key>.
+
+set -euo pipefail
+
+# Resolve symlink so SCRIPT_DIR points at the real script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if command -v readlink >/dev/null 2>&1; then
+  SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || echo "$SCRIPT_PATH")"
+fi
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
+
+# Prefer settings.file next to your Mango config; fall back to "relative to script" for portability
+DEFAULT_SETTINGS="$HOME/.config/mango/settings.file"
+SETTINGS_FILE="${MANGO_SETTINGS_FILE:-$DEFAULT_SETTINGS}"
+if [[ ! -f "$SETTINGS_FILE" ]]; then
+  SETTINGS_FILE="$SCRIPT_DIR/../settings.file"
+fi
+
+usage() {
+  echo "Usage: $(basename "$0") <key>" >&2
+  exit 2
+}
+
+KEY="${1:-}"
+[[ -n "$KEY" ]] || usage
+
+[[ -f "$SETTINGS_FILE" ]] || {
+  echo "Settings file not found: $SETTINGS_FILE" >&2
+  exit 2
+}
+
+CMD="$(
+  awk -v key="$KEY" '
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*$/ { next }
+    {
+      pos = index($0, ":");
+      if (pos == 0) next;
+
+      k = substr($0, 1, pos-1);
+      v = substr($0, pos+1);
+
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", k);
+      sub(/^[[:space:]]+/, "", v);
+
+      if (k == key) { print v; exit 0; }
+    }
+  ' "$SETTINGS_FILE"
+)"
+
+if [[ -z "$CMD" ]]; then
+  echo "No such key: $KEY (in $SETTINGS_FILE)" >&2
+  exit 1
+fi
+
+exec bash -lc "$CMD"
+
