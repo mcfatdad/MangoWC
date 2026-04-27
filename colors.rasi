@@ -1,0 +1,16 @@
+/* AUTO-GENERATED from: /home/mcfatdad/.config/mango/noctalia.conf */
+* {
+  bg:      #1a120a;
+  fg:      #f5bb85;
+  border:  #a38d7b;
+  accent:  #ffb874;
+
+  selbg:   #653e13;
+  selfg:   #f5bb85;
+
+  inputbg: #6a3b00;
+  altbg:   #bed03f;
+
+  urgent:  #ffb4ab;
+  shadow:  #000000;
+}

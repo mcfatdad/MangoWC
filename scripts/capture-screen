@@ -1,0 +1,352 @@
+#!/usr/bin/env bash
+# capture-screen (MangoWC)
+# Modes: current|all|separate|select|doctor
+#
+# Originals: ~/Pictures/Screenshots/Original
+# Edited:    ~/Pictures/Screenshots/Edited
+#
+# Notes:
+# - "current" auto-selects the output the mouse is on (via wl-find-cursor -p / wlrctl / Mango IPC).
+# - If auto-detection fails, it falls back to a click-to-pick output (slurp -o -f "%o").
+#   A small delay is added so the slurp overlay is gone before grim captures.
+
+set -euo pipefail
+
+# ---- Environment hardening (keybinds sometimes run with a skinny env) ----
+if [[ -z "${HOME:-}" ]]; then
+  if command -v getent >/dev/null 2>&1; then
+    HOME="$(getent passwd "$(id -u)" | cut -d: -f6)"
+  else
+    HOME="/home/$(id -un)"
+  fi
+fi
+
+if [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
+  XDG_RUNTIME_DIR="/run/user/$(id -u)"
+  export XDG_RUNTIME_DIR
+fi
+
+CFG="${XDG_CONFIG_HOME:-$HOME/.config}/mango"
+export PATH="$CFG/scripts:$HOME/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/bin"
+
+MODE="${1:-}"
+shift >/dev/null 2>&1 || true
+
+# ---- Logging ----
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
+LOG_DIR="$STATE_DIR/capture-screen"
+LOG_FILE="$LOG_DIR/capture-screen.log"
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+
+log() { printf '[%s] %s\n' "$(date +'%F %T')" "$*" >>"$LOG_FILE" 2>/dev/null || true; }
+
+die() {
+  echo "$*" >&2
+  log "ERROR: $*"
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "capture-screen error" "$*" >/dev/null 2>&1 || true
+  fi
+  exit 1
+}
+
+notify() {
+  command -v notify-send >/dev/null 2>&1 || return 0
+  notify-send "Screenshot saved" "$1" >/dev/null 2>&1 || true
+}
+
+need() { command -v "$1" >/dev/null 2>&1 || die "Missing dependency: $1"; }
+
+ts() { date +'%Y-%m-%d_%H-%M-%S'; }
+
+sanitize() {
+  LC_ALL=C printf '%s' "$1" | tr -c 'A-Za-z0-9._+-' '_' | sed 's/_\+/_/g'
+}
+
+# ---- Config: folders ----
+PICTURES_DIR="${XDG_PICTURES_DIR:-}"
+if [[ -z "$PICTURES_DIR" ]] && command -v xdg-user-dir >/dev/null 2>&1; then
+  PICTURES_DIR="$(xdg-user-dir PICTURES 2>/dev/null || true)"
+fi
+PICTURES_DIR="${PICTURES_DIR:-$HOME/Pictures}"
+
+OUTROOT="${PICTURES_DIR}/Screenshots"
+ORIG_DIR="${OUTROOT}/Original"
+EDIT_DIR="${OUTROOT}/Edited"
+mkdir -p "$ORIG_DIR" "$EDIT_DIR" || die "Cannot create screenshot folders under: $OUTROOT"
+
+# Delay (seconds) to let selection overlays disappear before capturing
+OVERLAY_DELAY="${CAPTURE_SCREEN_OVERLAY_DELAY:-0.25}"
+
+edit_file() {
+  local file="${1:-}"
+  [[ -n "$file" ]] || return 0
+
+  local base edited
+  base="$(basename -- "$file")"
+  edited="${EDIT_DIR}/${base}"
+
+  if command -v satty >/dev/null 2>&1; then
+    log "Launching satty: file=$file edited=$edited"
+    ( nohup satty --filename "$file" --output-filename "$edited" >/dev/null 2>&1 & ) || true
+    return 0
+  fi
+
+  if command -v swappy >/dev/null 2>&1; then
+    log "Launching swappy: file=$file edited=$edited"
+    ( nohup swappy -f "$file" -o "$edited" >/dev/null 2>&1 & ) || true
+    return 0
+  fi
+
+  log "No satty/swappy; opening file"
+  ( nohup xdg-open "$file" >/dev/null 2>&1 & ) || true
+}
+
+# ---- Output geometry ----
+list_outputs_tsv() {
+  # prints: name x y w h   (logical coords; accounts for scale)
+  need wlr-randr
+  wlr-randr | awk '
+    function flush() {
+      if (name != "" && have_mode) {
+        w=int((mw/scale)+0.5); h=int((mh/scale)+0.5);
+        print name, x, y, w, h
+      }
+    }
+    BEGIN { name=""; x=0; y=0; scale=1; mw=0; mh=0; have_mode=0; }
+    /^[^[:space:]]/ {
+      flush()
+      name=$1; x=0; y=0; scale=1; mw=0; mh=0; have_mode=0;
+    }
+    /^[[:space:]]*Position:/ {
+      split($2, a, ","); x=a[1]+0; y=a[2]+0;
+    }
+    /^[[:space:]]*Scale:/ {
+      scale=$2+0; if (scale == 0) scale=1;
+    }
+    /^[[:space:]]*[0-9]+x[0-9]+/ && $0 ~ /\(.*current.*\)/ {
+      split($1, m, "x");
+      mw=m[1]+0; mh=m[2]+0;
+      have_mode=1;
+    }
+    END { flush() }
+  '
+}
+
+
+# ---- Pointer position (best-effort) ----
+get_pointer_xy() {
+  # returns: "x y" or fails
+
+  # 1) wl-find-cursor can print coordinates without animation using -p
+  if command -v wl-find-cursor >/dev/null 2>&1; then
+    local out nums
+    out="$(wl-find-cursor -p 2>/dev/null || true)"
+    nums="$(echo "$out" | grep -oE '[-]?[0-9]+' | head -n 2 | tr '\n' ' ')"
+    if [[ "$(echo "$nums" | awk '{print NF}')" -eq 2 ]]; then
+      echo "$nums"
+      return 0
+    fi
+  fi
+
+  # 2) wlrctl (if installed)
+  if command -v wlrctl >/dev/null 2>&1; then
+    local out nums
+    out="$(wlrctl pointer get-position 2>/dev/null || wlrctl pointer position 2>/dev/null || true)"
+    nums="$(echo "$out" | grep -oE '[-]?[0-9]+' | head -n 2 | tr '\n' ' ')"
+    if [[ "$(echo "$nums" | awk '{print NF}')" -eq 2 ]]; then
+      echo "$nums"
+      return 0
+    fi
+  fi
+
+  # 3) MangoWC IPC (if present and supported)
+  if command -v mmsg >/dev/null 2>&1; then
+    local out
+    out="$(mmsg -g -p 2>/dev/null || true)"
+    if [[ -n "$out" ]]; then
+      local x y
+      x="$(echo "$out" | awk '/cursor_x/ {print $NF; exit}')"
+      y="$(echo "$out" | awk '/cursor_y/ {print $NF; exit}')"
+      if [[ -n "${x:-}" && -n "${y:-}" ]]; then
+        echo "$x $y"
+        return 0
+      fi
+    fi
+  fi
+
+  return 1
+}
+
+output_under_pointer() {
+  # prints output name or nothing
+  local px="$1" py="$2"
+  while read -r name ox oy ow oh; do
+    [[ -n "${name:-}" ]] || continue
+    if (( px >= ox && px < ox + ow && py >= oy && py < oy + oh )); then
+      echo "$name"
+      return 0
+    fi
+  done < <(list_outputs_tsv)
+  return 1
+}
+
+pick_output_interactive() {
+  # Click-to-pick output name (not geometry), so we can capture via grim -o.
+  need slurp
+  # slurp supports -f and %o (output name)
+  local out
+  out="$(slurp -o -f "%o" 2>/dev/null || true)"
+  [[ -n "$out" ]] || return 1
+  echo "$out"
+}
+
+# ---- Capture modes ----
+shot_all_one() {
+  need grim
+  local file="$ORIG_DIR/$(ts)_all.png"
+  log "all -> $file"
+  grim "$file" || die "grim failed (all). See log: $LOG_FILE"
+  notify "$file"
+  edit_file "$file"
+}
+
+shot_select_region() {
+  need grim
+  need slurp
+  local geom file
+  log "select: slurp"
+  geom="$(slurp)"
+  [[ -n "$geom" ]] || exit 1
+  file="$ORIG_DIR/$(ts)_select.png"
+  # Let the overlay disappear before capture
+  sleep "$OVERLAY_DELAY"
+  log "select -> $file geom=$geom"
+  grim -g "$geom" "$file" || die "grim failed (select). See log: $LOG_FILE"
+  notify "$file"
+  edit_file "$file"
+}
+
+shot_all_separate() {
+  need grim
+
+  local outputs=""
+  outputs="$(grim -l 2>/dev/null | awk '{print $1}' | sed '/^$/d' || true)"
+  if [[ -z "$outputs" ]] && command -v wlr-randr >/dev/null 2>&1; then
+    outputs="$(wlr-randr 2>/dev/null | awk '/^[^ \t]/ {print $1}' | sed '/^$/d' || true)"
+  fi
+
+  [[ -n "$outputs" ]] || die "No outputs found (grim -l / wlr-randr). See log: $LOG_FILE"
+
+  local name file
+  for name in $outputs; do
+    file="$ORIG_DIR/$(ts)_$(sanitize "$name").png"
+    log "separate -> $file output=$name"
+    grim -o "$name" "$file" || die "grim failed (separate: $name). See log: $LOG_FILE"
+    notify "$file"
+    edit_file "$file"
+  done
+}
+
+shot_current_output() {
+  need grim
+  need wlr-randr
+
+  # 1) Auto: mouse output
+  if xy="$(get_pointer_xy)"; then
+    local px py out
+    px="$(echo "$xy" | awk '{print $1}')"
+    py="$(echo "$xy" | awk '{print $2}')"
+    out="$(output_under_pointer "$px" "$py" || true)"
+    if [[ -n "${out:-}" ]]; then
+      local file="$ORIG_DIR/$(ts)_current_$(sanitize "$out").png"
+      log "current(auto) -> $file out=$out pointer=$px,$py"
+      grim -o "$out" "$file" || die "grim failed (current:auto). See log: $LOG_FILE"
+      notify "$file"
+      edit_file "$file"
+      return 0
+    fi
+    log "current(auto) no match: pointer=$px,$py"
+  else
+    log "current(auto) no pointer position available"
+  fi
+
+  # 2) Fallback: click-to-pick output name (no overlay captured)
+  if command -v slurp >/dev/null 2>&1; then
+    local picked
+    picked="$(pick_output_interactive || true)"
+    if [[ -n "${picked:-}" ]]; then
+      local file="$ORIG_DIR/$(ts)_current_$(sanitize "$picked").png"
+      # Let the slurp overlay disappear before capture
+      sleep "$OVERLAY_DELAY"
+      log "current(pick) -> $file out=$picked"
+      grim -o "$picked" "$file" || die "grim failed (current:pick). See log: $LOG_FILE"
+      notify "$file"
+      edit_file "$file"
+      return 0
+    fi
+  fi
+
+  die "Couldn't determine output for current screenshot (auto-detect failed and no pick result)."
+}
+
+doctor() {
+  echo "capture-screen doctor"
+  echo "LOG: $LOG_FILE"
+  echo "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
+  echo "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}"
+  echo "HOME=$HOME"
+  echo "ORIG_DIR=$ORIG_DIR"
+  echo "EDIT_DIR=$EDIT_DIR"
+  echo
+  echo "Commands:"
+  for c in grim slurp wlr-randr satty swappy wl-find-cursor wlrctl mmsg; do
+    if command -v "$c" >/dev/null 2>&1; then
+      printf "  OK  %-12s -> %s\n" "$c" "$(command -v "$c")"
+    else
+      printf "  --  %-12s -> (missing)\n" "$c"
+    fi
+  done
+  echo
+  echo "Pointer position (best-effort):"
+  if xy="$(get_pointer_xy)"; then
+    echo "  $xy"
+  else
+    echo "  <unavailable>"
+  fi
+  echo
+  echo "Parsed outputs (from wlr-randr):"
+  list_outputs_tsv | while read -r n x y w h; do
+    printf "  %s  pos=%d,%d  size=%dx%d\n" "$n" "$x" "$y" "$w" "$h"
+  done
+  echo
+  if xy="$(get_pointer_xy)"; then
+    px="$(echo "$xy" | awk '{print $1}')"
+    py="$(echo "$xy" | awk '{print $2}')"
+    out="$(output_under_pointer "$px" "$py" || true)"
+    echo "output-under-pointer: ${out:-<no match>}"
+  else
+    echo "output-under-pointer: <unavailable>"
+  fi
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") {current|all|separate|select|doctor}
+
+  current   Screenshot the monitor the mouse is on (auto; fallback: click output)
+  all       Screenshot all monitors into one image
+  separate  Screenshot each monitor into a separate image
+  select    Screenshot a region you select
+  doctor    Diagnostics + parsed output rectangles
+EOF
+}
+
+case "$MODE" in
+  current)  shot_current_output ;;
+  all)      shot_all_one ;;
+  separate) shot_all_separate ;;
+  select)   shot_select_region ;;
+  doctor)   doctor ;;
+  ""|-h|--help) usage ;;
+  *) echo "Unknown mode: $MODE" >&2; usage; exit 2 ;;
+esac

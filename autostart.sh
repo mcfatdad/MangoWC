@@ -25,9 +25,16 @@ wl-clip-persist --clipboard regular --reconnect-tries 0 >/dev/null 2>&1 &
 wl-paste --type text --watch cliphist store >/dev/null 2>&1 &
 
 # --- Notifications ---
-swaync >/dev/null 2>&1 &
+#swaync >/dev/null 2>&1 &
 
 # --- Polkit authentication agent ---
 /usr/lib/xfce-polkit/xfce-polkit >/dev/null 2>&1 &
 
+# Restart elephant so it picks up the correct environment and recreates its IPC/socket
+systemctl --user restart elephant.service
+
 export PATH="$HOME/.config/mango/scripts:$PATH"
+
+# Remove any other swayosd-server start lines from elsewhere.
+pgrep -x swayosd-server >/dev/null || swayosd-server &
+

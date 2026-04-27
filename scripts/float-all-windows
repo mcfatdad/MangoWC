@@ -1,0 +1,39 @@
+#!/bin/bash
+set -euo pipefail
+
+LOG="${XDG_RUNTIME_DIR:-/tmp}/mango-toggle-view-floating.log"
+MMSG="${MMSG_BIN:-mmsg}"
+
+# Get: <monitor> <tagnum> <clients_in_tag> for the tag that contains the focused client
+read -r MON TAG NCLIENTS < <(
+  "$MMSG" -g -t | awk '
+    $2=="tag" && $6==1 { print $1, $3, $5; exit }
+  '
+)
+
+# Fallbacks (in case formats differ)
+: "${NCLIENTS:=0}"
+if [[ "$NCLIENTS" -lt 1 ]]; then
+  NCLIENTS=1
+fi
+
+{
+  echo "[$(date -Is)] toggle-view-floating: mon=${MON:-?} tag=${TAG:-?} nclients=$NCLIENTS"
+} >>"$LOG"
+
+# Toggle once per client in *this focused tag*
+# This assumes focusstack cycles through the clients in the current tag (normal behaviour). :contentReference[oaicite:1]{index=1}
+for ((i=0; i<NCLIENTS; i++)); do
+  "$MMSG" -d togglefloating
+  "$MMSG" -d focusstack,next
+  sleep 0.01
+done
+
+# Optional: return focus to where you started (undo the N focus moves)
+for ((i=0; i<NCLIENTS; i++)); do
+  "$MMSG" -d focusstack,prev
+  sleep 0.005
+done
+
+echo "[$(date -Is)] done" >>"$LOG"
+

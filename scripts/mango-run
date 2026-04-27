@@ -13,8 +13,23 @@ fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
 
+#!/usr/bin/bash
+# ~/.config/mango/scripts/mango-run
+# Usage: mango-run <key>
+# Reads settings.file and runs the value for <key>.
+
+set -euo pipefail
+
+# Resolve symlink so SCRIPT_DIR points at the real script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+if command -v readlink >/dev/null 2>&1; then
+  SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || echo "$SCRIPT_PATH")"
+fi
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
+
 # Prefer settings.file next to your Mango config; fall back to "relative to script" for portability
-DEFAULT_SETTINGS="$HOME/.config/mango/settings.file"
+DEFAULT_SETTINGS="${XDG_CONFIG_HOME:-$HOME/.config}/mango/settings.file"
 SETTINGS_FILE="${MANGO_SETTINGS_FILE:-$DEFAULT_SETTINGS}"
 if [[ ! -f "$SETTINGS_FILE" ]]; then
   SETTINGS_FILE="$SCRIPT_DIR/../settings.file"
@@ -57,5 +72,16 @@ if [[ -z "$CMD" ]]; then
   exit 1
 fi
 
-exec bash -lc "$CMD"
+# Strip possible CR (in case settings.file has Windows line endings)
+CMD="${CMD%$'\r'}"
+
+# Ensure scripts are discoverable for values like: "capture-screen current"
+# Also survive sessions where PATH might be empty.
+BASE_PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/bin}"
+export PATH="$SCRIPT_DIR:$HOME/.local/bin:$BASE_PATH"
+
+# Execute the value (supports args)
+# NOTE: Avoid "-l" (login shell) because it can reset PATH and break script lookups.
+exec /usr/bin/bash -c "$CMD"
+
 

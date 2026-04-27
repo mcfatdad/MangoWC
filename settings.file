@@ -1,4 +1,4 @@
-launcher:rofi -show drun
+launcher:rofi -show drun -show-icons
 wallpaper:waypaper
 terminal:ghostty
 alternate_terminal:foot
@@ -8,10 +8,17 @@ terminal_filemanager:ghostty -e yazi
 musicplayer:elisa
 video:netflix
 streaming:youtube
-coding:emacs -c client
-samcoupe:simcoupe
+coding:bash -lc emacs -c client
+samcoupe:/mnt/SEAGATE8TB/GAMES/EMULATION/SIMCOUPE/simcoupe
 speccynext:MONO_IOMAP=all mono /mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/CSpect.exe -tv -w3 -zxnext -vsync -threaded -s28 -mmc=/mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/TBBlue.img
 gaming:steam
 graphics:gimp
-writing:libreoffice writer
-spreadsheet: libreoffice calc
+writing:libreoffice --writer
+spreadsheet:libreoffice --calc
+capture-current-screen:capture-screen current
+capture-all-screens:capture-screen all
+capture-separate-screens:capture-screen separate
+capture-part-screen:capture-screen select
+update-system:ghostty --class=com.mitchellh.ghostty.sysupdate -e update-system
+system-performance:ghostty -e btop
+float-all-windows:bash -lc '${XDG_CONFIG_HOME:-$HOME/.config}/mango/scripts/float-all-windows'

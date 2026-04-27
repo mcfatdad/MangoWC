@@ -1,0 +1,99 @@
+@import "~/.config/mango/colors.rasi"
+
+/* Noctalia (matugen/Noctalia-driven) rofi theme
+ * Place this file next to noctalia.conf and colors.rasi:
+ *   ~/.config/mango/noctalia.rasi
+ *   ~/.config/mango/colors.rasi   (generated)
+ */
+
+* {
+  font: "JetBrainsMono Nerd Font 12";
+
+  background-color: transparent;
+  text-color: @fg;
+}
+
+window {
+  location: center;
+  anchor: center;
+
+  width: 42%;
+  padding: 14px;
+
+  background-color: @bg;
+
+  border: 2px;
+  border-color: @border;
+  border-radius: 14px;
+}
+
+mainbox {
+  padding: 0px;
+  background-color: transparent;
+}
+
+inputbar {
+  padding: 10px 12px;
+  margin: 0px 0px 10px 0px;
+
+  background-color: @inputbg;
+  border-radius: 12px;
+
+  text-color: @fg;
+}
+
+prompt {
+  text-color: @accent;
+}
+
+entry {
+  text-color: @fg;
+  placeholder: "Type to search…";
+  placeholder-color: @border;
+}
+
+listview {
+  background-color: transparent;
+  spacing: 6px;
+  lines: 10;
+}
+
+element {
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  background-color: transparent;
+  text-color: @fg;
+}
+
+element-icon {
+  size: 1.0em;
+  margin: 0px 10px 0px 0px;
+}
+
+element selected {
+  background-color: @selbg;
+  text-color: @selfg;
+
+  border: 1px;
+  border-color: @accent;
+}
+
+element-text {
+  background-color: transparent;
+  text-color: inherit;
+}
+
+message {
+  margin: 10px 0px 0px 0px;
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  background-color: @altbg;
+  text-color: @fg;
+}
+
+error-message {
+  background-color: @altbg;
+  text-color: @urgent;
+}
