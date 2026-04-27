@@ -1,11 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-# Prefer an AUR helper if present, otherwise plain pacman
-if command -v paru >/dev/null 2>&1; then
+if command -v nixos-rebuild >/dev/null 2>&1 && [[ -f /etc/NIXOS ]]; then
+  exec sudo nixos-rebuild switch --flake /etc/nixos#nixos
+elif command -v paru >/dev/null 2>&1; then
   exec paru -Syu
 elif command -v yay >/dev/null 2>&1; then
   exec yay -Syu
-else
+elif command -v pacman >/dev/null 2>&1; then
   exec sudo pacman -Syu
+else
+  echo "No supported system updater found." >&2
+  exit 1
 fi

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ~/.config/mango/autostart.sh
 # MangoWC session autostart (Wayland + XWayland friendly)
 
@@ -28,7 +28,11 @@ wl-paste --type text --watch cliphist store >/dev/null 2>&1 &
 #swaync >/dev/null 2>&1 &
 
 # --- Polkit authentication agent ---
-/usr/lib/xfce-polkit/xfce-polkit >/dev/null 2>&1 &
+if command -v xfce-polkit >/dev/null 2>&1; then
+  xfce-polkit >/dev/null 2>&1 &
+elif command -v polkit-gnome-authentication-agent-1 >/dev/null 2>&1; then
+  polkit-gnome-authentication-agent-1 >/dev/null 2>&1 &
+fi
 
 # Restart elephant so it picks up the correct environment and recreates its IPC/socket
 systemctl --user restart elephant.service

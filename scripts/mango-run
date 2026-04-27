@@ -82,6 +82,5 @@ export PATH="$SCRIPT_DIR:$HOME/.local/bin:$BASE_PATH"
 
 # Execute the value (supports args)
 # NOTE: Avoid "-l" (login shell) because it can reset PATH and break script lookups.
-exec /usr/bin/bash -c "$CMD"
-
+exec "${BASH:-bash}" -c "$CMD"
 
