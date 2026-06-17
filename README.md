@@ -45,3 +45,19 @@ Mango compositor blur and shadows are disabled for layer-shell surfaces.
 Noctalia handles the visual treatment of its own panels and notifications.
 The `dimland_layer` rule also prevents opened panels from hiding application
 windows behind an animated or blurred shell dimming surface.
+
+## Known MangoWM limitation
+
+The `float-all-windows` helper intentionally uses Mango's built-in
+`toggle_all_floating` command only.
+
+Older experiments tried to scatter windows and then restore the exact previous
+tiled layout. This worked with two windows, but became unreliable with three or
+more windows because Mango does not currently expose a full layout-tree
+snapshot/restore command through IPC.
+
+For now, the supported behaviour is:
+
+- toggle visible windows between tiled and floating
+- do not move, scatter, resize, or reorder windows
+- accept that complex 3+ window tiled layouts may not restore exact positions
