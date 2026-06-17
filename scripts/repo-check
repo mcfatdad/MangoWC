@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Validate the MangoWC repo before committing.
+
+set -euo pipefail
+
+echo "== Git status =="
+git status --short
+
+echo
+echo "== Mango config parse =="
+mango -c "${XDG_CONFIG_HOME:-$HOME/.config}/mango/config.conf" -p
+
+echo
+echo "== Mango version =="
+mmsg get version
+
+echo
+echo "== Backup/archive files =="
+if find . \
+  -path './.git' -prune -o \
+  \( -name '*.bak-*' -o -name '*.bak.*' -o -name '*.zip' \) \
+  -print | grep .; then
+  echo "ERROR: backup/archive files found"
+  exit 1
+else
+  echo "OK: no backup/archive files found"
+fi
+
+echo
+echo "== Private machine path / secret scan =="
+if grep -RniE '/home/mcfatdad|/mnt/SEAGATE|/mnt/WD10TB|token=|secret=|password=' . \
+  --exclude-dir=.git \
+  --exclude-dir=scripts/experimental \
+  --exclude='repo-check' \
+  --exclude='*.zip' \
+  --exclude='*.png' \
+  --exclude='*.jpg'; then
+  echo
+  echo "WARNING: review the hits above"
+else
+  echo "OK: no private machine paths or obvious secret assignments found"
+fi
+
+echo
+echo "== Done =="
