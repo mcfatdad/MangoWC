@@ -5,13 +5,15 @@ alternate_terminal:foot
 browser:librewolf
 filemanager:nautilus
 terminal_filemanager:ghostty -e yazi
+coding:emacs
 musicplayer:elisa
 video:netflix
 streaming:youtube
-coding:bash -lc emacs -c client
-samcoupe:/mnt/SEAGATE8TB/GAMES/EMULATION/SIMCOUPE/simcoupe
-speccynext:MONO_IOMAP=all mono /mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/CSpect.exe -tv -w3 -zxnext -vsync -threaded -s28 -mmc=/mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/TBBlue.img
-gaming:steam
+!samcoupe:/mnt/SEAGATE8TB/GAMES/EMULATION/SIMCOUPE/simcoupe
+samcoupe:simcoupe
+!speccynext:MONO_IOMAP=all mono /mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/CSpect.exe -tv -w3 -zxnext -vsync -threaded -s28 -mmc=/mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/TBBlue.img
+speccynext:cspect
+gaming:$HOME/.config/mango/scripts/APPS/steam.sh
 graphics:gimp
 writing:libreoffice --writer
 spreadsheet:libreoffice --calc
@@ -21,4 +23,4 @@ capture-separate-screens:capture-screen separate
 capture-part-screen:capture-screen select
 update-system:ghostty --class=com.mitchellh.ghostty.sysupdate -e update-system
 system-performance:ghostty -e btop
-float-all-windows:bash -lc '${XDG_CONFIG_HOME:-$HOME/.config}/mango/scripts/float-all-windows'
+float-all-windows:float-all-windows

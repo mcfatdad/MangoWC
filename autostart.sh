@@ -2,6 +2,13 @@
 # ~/.config/mango/autostart.sh
 # MangoWC session autostart (Wayland + XWayland friendly)
 
+# Check PATHS are not added, and add them. This is useful for first time clones
+ENV_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/mango/scripts/env.sh"
+if [ -f "$ENV_FILE" ]; then
+  source "$ENV_FILE"
+fi
+
+
 # --- Export session environment to DBus + systemd user services ---
 # This fixes apps launched via desktop entries/launchers (e.g. Steam) not seeing DISPLAY/XAUTHORITY.
 export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-wlroots}"
@@ -37,8 +44,8 @@ fi
 # Restart elephant so it picks up the correct environment and recreates its IPC/socket
 systemctl --user restart elephant.service
 
-export PATH="$HOME/.config/mango/scripts:$PATH"
-
 # Remove any other swayosd-server start lines from elsewhere.
 pgrep -x swayosd-server >/dev/null || swayosd-server &
 
+# Noctalia Shell
+pgrep -f "noctalia-shell" >/dev/null || noctalia-shell >/tmp/noctalia-shell.log 2>&1 &

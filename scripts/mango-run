@@ -1,86 +1,61 @@
-#!/bin/bash
-# ~/.config/mango/scripts/mango-run
-# Usage: mango-run <key>
-# Reads settings.file and runs the value for <key>.
+#!/usr/bin/env bash
+# Run named Mango helper commands from settings.file.
 
 set -euo pipefail
 
-# Resolve symlink so SCRIPT_DIR points at the real script location
-SCRIPT_PATH="${BASH_SOURCE[0]}"
-if command -v readlink >/dev/null 2>&1; then
-  SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || echo "$SCRIPT_PATH")"
-fi
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+MANGO_DIR="${MANGO_DIR:-$CONFIG_HOME/mango}"
+SETTINGS_FILE="${MANGO_SETTINGS_FILE:-$MANGO_DIR/settings.file}"
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
-
-#!/usr/bin/bash
-# ~/.config/mango/scripts/mango-run
-# Usage: mango-run <key>
-# Reads settings.file and runs the value for <key>.
-
-set -euo pipefail
-
-# Resolve symlink so SCRIPT_DIR points at the real script location
-SCRIPT_PATH="${BASH_SOURCE[0]}"
-if command -v readlink >/dev/null 2>&1; then
-  SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || echo "$SCRIPT_PATH")"
-fi
-
-SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
-
-# Prefer settings.file next to your Mango config; fall back to "relative to script" for portability
-DEFAULT_SETTINGS="${XDG_CONFIG_HOME:-$HOME/.config}/mango/settings.file"
-SETTINGS_FILE="${MANGO_SETTINGS_FILE:-$DEFAULT_SETTINGS}"
-if [[ ! -f "$SETTINGS_FILE" ]]; then
-  SETTINGS_FILE="$SCRIPT_DIR/../settings.file"
-fi
+export PATH="$MANGO_DIR/scripts:$MANGO_DIR/scripts/APPS:$PATH"
 
 usage() {
-  echo "Usage: $(basename "$0") <key>" >&2
-  exit 2
+  echo "Usage: mango-run <name> [args...]" >&2
+  echo >&2
+  echo "Available entries:" >&2
+  if [[ -f "$SETTINGS_FILE" ]]; then
+    awk -F: '
+      /^[[:space:]]*#/ { next }
+      /^[[:space:]]*$/ { next }
+      NF >= 2 { print "  " $1 }
+    ' "$SETTINGS_FILE" >&2
+  fi
 }
 
-KEY="${1:-}"
-[[ -n "$KEY" ]] || usage
-
-[[ -f "$SETTINGS_FILE" ]] || {
-  echo "Settings file not found: $SETTINGS_FILE" >&2
-  exit 2
-}
-
-CMD="$(
-  awk -v key="$KEY" '
-    /^[[:space:]]*#/ { next }
-    /^[[:space:]]*$/ { next }
-    {
-      pos = index($0, ":");
-      if (pos == 0) next;
-
-      k = substr($0, 1, pos-1);
-      v = substr($0, pos+1);
-
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", k);
-      sub(/^[[:space:]]+/, "", v);
-
-      if (k == key) { print v; exit 0; }
-    }
-  ' "$SETTINGS_FILE"
-)"
-
-if [[ -z "$CMD" ]]; then
-  echo "No such key: $KEY (in $SETTINGS_FILE)" >&2
+if (( $# < 1 )); then
+  usage
   exit 1
 fi
 
-# Strip possible CR (in case settings.file has Windows line endings)
-CMD="${CMD%$'\r'}"
+name="$1"
+shift
 
-# Ensure scripts are discoverable for values like: "capture-screen current"
-# Also survive sessions where PATH might be empty.
-BASE_PATH="${PATH:-/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/bin}"
-export PATH="$SCRIPT_DIR:$HOME/.local/bin:$BASE_PATH"
+if [[ ! -f "$SETTINGS_FILE" ]]; then
+  echo "ERROR: settings file not found: $SETTINGS_FILE" >&2
+  exit 1
+fi
 
-# Execute the value (supports args)
-# NOTE: Avoid "-l" (login shell) because it can reset PATH and break script lookups.
-exec "${BASH:-bash}" -c "$CMD"
+cmd="$(
+  awk -F: -v key="$name" '
+    $1 == key {
+      sub(/^[^:]*:/, "")
+      print
+      found=1
+      exit
+    }
+    END {
+      if (!found) exit 1
+    }
+  ' "$SETTINGS_FILE"
+)" || {
+  echo "ERROR: unknown mango-run entry: $name" >&2
+  usage
+  exit 1
+}
 
+if [[ -z "$cmd" ]]; then
+  echo "ERROR: empty command for mango-run entry: $name" >&2
+  exit 1
+fi
+
+exec bash -lc "$cmd" -- "$@"
