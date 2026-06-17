@@ -9,10 +9,8 @@ coding:emacs
 musicplayer:elisa
 video:netflix
 streaming:youtube
-!samcoupe:$HOME/.config/mango/scripts/APPS/samcoupe.sh
-!samcoupe:$HOME/.config/mango/scripts/APPS/samcoupe.sh
-!speccynext:$HOME/.config/mango/scripts/APPS/speccynext.sh
-!speccynext:$HOME/.config/mango/scripts/APPS/speccynext.sh
+samcoupe:$HOME/.config/mango/scripts/APPS/samcoupe.sh
+speccynext:$HOME/.config/mango/scripts/APPS/speccynext.sh
 gaming:$HOME/.config/mango/scripts/APPS/steam.sh
 graphics:gimp
 writing:libreoffice --writer
