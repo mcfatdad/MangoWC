@@ -1,0 +1,257 @@
+#+title: MangoWC Configuration
+#+author: MCFatDad
+#+startup: overview
+#+options: toc:2
+
+* Overview
+
+This repository contains my personal MangoWM / MangoWC desktop configuration.
+
+It is a real working desktop setup, but it has been cleaned up so it can be
+published, forked, and adapted more easily.
+
+| Area | Included |
+|------+----------|
+| Window manager | MangoWM / MangoWC configuration |
+| Shell integration | Noctalia Shell |
+| Launcher helpers | =mango-run= and app wrapper scripts |
+| Gaming | Steam routed to a dedicated HDMI-A-1 gaming tag |
+| Emulation | SAM Coupé and ZX Spectrum Next wrappers |
+| Screenshots | Mango-aware capture helper |
+| Diagnostics | Mango health/check helper |
+
+* Requirements
+
+This configuration expects the following tools to be available:
+
+| Tool | Purpose |
+|------+---------|
+| =mango= | MangoWM compositor |
+| =mmsg= | Mango IPC client |
+| =jq= | JSON parsing for Mango IPC helpers |
+| =bash= | Script runtime |
+| =rofi= | Application launcher |
+| =steam= | Steam gaming launcher |
+| =simcoupe= | SAM Coupé emulator |
+| =cspect= | ZX Spectrum Next emulator |
+| =notify-send= | Optional desktop notifications |
+| =grim= / =slurp= | Screenshot capture helpers, if enabled |
+
+* Repository layout
+
+| Path | Purpose |
+|------+---------|
+| =config.conf= | Main Mango config entry point |
+| =conf.d/= | Modular Mango configuration |
+| =conf.d/binds/= | Key, mouse, tag, monitor and launcher bindings |
+| =scripts/= | Mango helper scripts |
+| =scripts/APPS/= | Application launch wrappers |
+| =scripts/experimental/= | Prototype scripts not used in the daily config |
+| =settings.file= | Named commands used by =mango-run= |
+| =noctalia.conf= | Noctalia-generated appearance integration |
+| =colors.rasi= | Rofi colour integration |
+
+* Installation
+
+The intended live location is:
+
+#+begin_src bash
+~/.config/mango
+#+end_src
+
+On my system this is a symlink to the dotfiles checkout:
+
+#+begin_src bash
+~/.config/mango -> ~/dotfiles/mango
+#+end_src
+
+To clone and link manually:
+
+#+begin_src bash
+git clone git@github.com:mcfatdad/MangoWC.git ~/dotfiles/mango
+
+rm -rf ~/.config/mango
+ln -s ~/dotfiles/mango ~/.config/mango
+#+end_src
+
+* Validation
+
+Parse the Mango configuration:
+
+#+begin_src bash
+mango -c ~/.config/mango/config.conf -p
+#+end_src
+
+Check the running Mango version:
+
+#+begin_src bash
+mmsg get version
+#+end_src
+
+Show tags and clients:
+
+#+begin_src bash
+mmsg get all-tags
+mmsg get all-clients
+#+end_src
+
+Run the Mango health helper:
+
+#+begin_src bash
+mango-run mango-check
+#+end_src
+
+* Reloading Mango
+
+The config includes a Mango reload binding:
+
+#+begin_src conf
+bind=SUPER+CTRL,r,reload_config
+#+end_src
+
+From a terminal on Mango 0.14 or newer:
+
+#+begin_src bash
+mmsg dispatch reload_config
+#+end_src
+
+* =mango-run=
+
+=mango-run= reads named commands from =settings.file=.
+
+Example entries:
+
+#+begin_src conf
+terminal:$HOME/.config/mango/scripts/APPS/terminal.sh
+browser:$HOME/.config/mango/scripts/APPS/browser.sh
+filemanager:$HOME/.config/mango/scripts/APPS/filemanager.sh
+steam:$HOME/.config/mango/scripts/APPS/steam.sh
+samcoupe:$HOME/.config/mango/scripts/APPS/samcoupe.sh
+speccynext:$HOME/.config/mango/scripts/APPS/speccynext.sh
+#+end_src
+
+Run a command manually:
+
+#+begin_src bash
+mango-run terminal
+mango-run steam
+mango-run samcoupe
+mango-run speccynext
+#+end_src
+
+* Monitor layout
+
+This setup is currently tuned for two displays:
+
+| Monitor | Role |
+|---------+------|
+| =DP-3= | Left monitor |
+| =HDMI-A-1= | Right / primary gaming monitor |
+
+Both monitors expose persistent Tags 1-9.
+
+HDMI-A-1 Tag 9 is the dedicated gaming tag and uses the scroller layout.
+DP-3 Tag 9 remains on the normal dwindle layout.
+
+* Steam and gaming
+
+Steam is routed to:
+
+| Setting | Value |
+|---------+-------|
+| Monitor | =HDMI-A-1= |
+| Tag | =9= |
+| Layout | =scroller= |
+| Behaviour | Open without switching to Tag 9 |
+| Size | Fake maximised within the normal usable area |
+
+Steam games and gamescope windows are also routed to HDMI-A-1 Tag 9.
+
+* Emulators
+
+SAM Coupé and ZX Spectrum Next are launched through wrapper scripts:
+
+#+begin_src bash
+scripts/APPS/samcoupe.sh
+scripts/APPS/speccynext.sh
+#+end_src
+
+The wrappers call system commands:
+
+#+begin_src bash
+simcoupe
+cspect
+#+end_src
+
+On NixOS these are provided declaratively by the system configuration, not by
+hard-coded paths in this repository.
+
+* Known MangoWM limitation
+
+The =float-all-windows= helper intentionally uses Mango's built-in
+=toggle_all_floating= command only.
+
+Older experiments tried to scatter windows and then restore the exact previous
+tiled layout. This worked with two windows, but became unreliable with three or
+more windows because Mango does not currently expose a full layout-tree
+snapshot/restore command through IPC.
+
+Supported behaviour:
+
+- toggle visible windows between tiled and floating
+- do not move, scatter, resize or reorder windows
+- accept that complex 3+ window tiled layouts may not restore exact positions
+
+* Experimental scripts
+
+=scripts/experimental/= contains prototype scripts that are not part of the
+main daily configuration path.
+
+These scripts may use older Mango IPC syntax and should be reviewed before use.
+
+* Portability notes
+
+This repository should not contain hard-coded personal paths such as:
+
+#+begin_src text
+/home/<user>
+/mnt/<drive-name>
+#+end_src
+
+Machine-specific paths should be handled by the system configuration or local
+ignored files, not committed to this repository.
+
+* Git hygiene
+
+Ignored local artefacts include:
+
+#+begin_src text
+*.bak-*
+*.bak.*
+*.zip
+local.env
+#+end_src
+
+Before committing:
+
+#+begin_src bash
+git status --short
+
+grep -RniE '/home/|/mnt/|token|secret|password' . \
+  --exclude-dir=.git \
+  --exclude-dir=scripts/experimental \
+  --exclude='*.zip'
+#+end_src
+
+* Status
+
+Current target setup:
+
+| Component | Status |
+|-----------+--------|
+| MangoWM | 0.14.4 or newer |
+| Noctalia Shell | Integrated |
+| Steam Tag 9 routing | Working |
+| Persistent tags | Tags 1-9 on both monitors |
+| Floating toggle | Stable simple toggle |
+| Machine-specific emulator paths | Removed from Mango repo |
