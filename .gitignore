@@ -9,3 +9,4 @@ state/
 *.bak-*
 *.zip
 *.bak.*
+local.env

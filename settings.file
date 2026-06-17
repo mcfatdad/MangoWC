@@ -9,10 +9,10 @@ coding:emacs
 musicplayer:elisa
 video:netflix
 streaming:youtube
-!samcoupe:/mnt/SEAGATE8TB/GAMES/EMULATION/SIMCOUPE/simcoupe
-samcoupe:simcoupe
-!speccynext:MONO_IOMAP=all mono /mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/CSpect.exe -tv -w3 -zxnext -vsync -threaded -s28 -mmc=/mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT/TBBlue.img
-speccynext:cspect
+!samcoupe:$HOME/.config/mango/scripts/APPS/samcoupe.sh
+!samcoupe:$HOME/.config/mango/scripts/APPS/samcoupe.sh
+!speccynext:$HOME/.config/mango/scripts/APPS/speccynext.sh
+!speccynext:$HOME/.config/mango/scripts/APPS/speccynext.sh
 gaming:$HOME/.config/mango/scripts/APPS/steam.sh
 graphics:gimp
 writing:libreoffice --writer

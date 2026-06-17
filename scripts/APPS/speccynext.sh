@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/mnt/SEAGATE8TB/GAMES/EMULATION/SPECCYNEXT/CSPECT"
-cd "$ROOT"
+if ! command -v cspect >/dev/null 2>&1; then
+  notify-send "Mango" "cspect is not installed" 2>/dev/null || true
+  echo "ERROR: cspect is not installed or not in PATH" >&2
+  exit 1
+fi
 
-# -tv disables shaders (more compatible), -w3 scales the window,
-# -zxnext selects Next mode, -s28 sets 28MHz, and **note the equals sign** in -mmc=
-exec env MONO_IOMAP=all mono ./CSpect.exe -tv -w3 -zxnext -vsync -threaded -s28 -mmc="$ROOT/TBBlue.img"
-
+exec cspect "$@"
