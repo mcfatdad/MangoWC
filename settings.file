@@ -1,24 +1,33 @@
-# Mango named launcher entries.
-# Used by:
-#   mango-run <name>
+launcher:rofi -show drun -show-icons
+wallpaper:waypaper
+terminal:ghostty
+alternate_terminal:foot
+browser:librewolf
+filemanager:nautilus
+terminal_filemanager:ghostty -e yazi
+coding:emacs
+musicplayer:elisa
+video:netflix
+streaming:youtube
 
-# Core applications
-terminal:$HOME/.config/mango/scripts/APPS/terminal.sh
-browser:$HOME/.config/mango/scripts/APPS/browser.sh
-filemanager:$HOME/.config/mango/scripts/APPS/filemanager.sh
-youtube:$HOME/.config/mango/scripts/APPS/youtube.sh
-
-# Gaming
-steam:$HOME/.config/mango/scripts/APPS/steam.sh
-gaming:$HOME/.config/mango/scripts/APPS/steam.sh
-
-# Emulation
 samcoupe:$HOME/.config/mango/scripts/APPS/samcoupe.sh
 speccynext:$HOME/.config/mango/scripts/APPS/speccynext.sh
 
-# System helpers
-update-system:$HOME/.config/mango/scripts/update-system
+steam:$HOME/.config/mango/scripts/APPS/steam.sh
+gaming:$HOME/.config/mango/scripts/APPS/steam.sh
 
-# Diagnostics
+graphics:gimp
+writing:libreoffice --writer
+spreadsheet:libreoffice --calc
+
+capture-current-screen:capture-screen current
+capture-all-screens:capture-screen all
+capture-separate-screens:capture-screen separate
+capture-part-screen:capture-screen select
+
+update-system:ghostty --class=com.mitchellh.ghostty.sysupdate -e update-system
+system-performance:ghostty -e btop
+float-all-windows:float-all-windows
+
 mango-check:$HOME/.config/mango/scripts/mango-check
 repo-check:$HOME/.config/mango/scripts/repo-check
