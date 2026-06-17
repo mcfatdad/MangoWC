@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# MangoWM health/check helper.
+
+set -euo pipefail
+
+MANGO_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/mango"
+CONFIG_FILE="$MANGO_DIR/config.conf"
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "ERROR: missing command: $1" >&2
+    exit 1
+  }
+}
+
+need mango
+need mmsg
+need jq
+
+echo "== Mango version =="
+mmsg get version | jq .
+
+echo
+echo "== Mango config parse =="
+mango -c "$CONFIG_FILE" -p
+
+echo
+echo "== Tags =="
+mmsg get all-tags | jq '
+  .all_tags[]
+  | {
+      monitor,
+      tags: [
+        .tags[]
+        | {
+            index,
+            active: .is_active,
+            layout,
+            client_count
+          }
+      ]
+    }
+'
+
+echo
+echo "== Clients =="
+mmsg get all-clients | jq '
+  .clients[]
+  | {
+      id,
+      title,
+      appid,
+      monitor,
+      tags,
+      floating: .is_floating,
+      maximized: .is_maximized,
+      fakefullscreen: .is_fakefullscreen
+    }
+'

@@ -24,3 +24,4 @@ capture-part-screen:capture-screen select
 update-system:ghostty --class=com.mitchellh.ghostty.sysupdate -e update-system
 system-performance:ghostty -e btop
 float-all-windows:float-all-windows
+mango-check:$HOME/.config/mango/scripts/mango-check
