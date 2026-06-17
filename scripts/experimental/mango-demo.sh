@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# NOTE:
+# This is an experimental/prototype demo script.
+# It may use older Mango IPC syntax and is not part of the main daily config path.
+#
 
 set -euo pipefail
 
